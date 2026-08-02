@@ -1,88 +1,89 @@
 # desktop-organizer
 
-Автоматическая уборка рабочего стола macOS.
+Automatic macOS desktop cleanup.
 
-## Что делает
+## What it does
 
-1. **Ежедневно** (по умолчанию в 10:30) перемещает файлы и папки, появившиеся
-   на рабочем столе **вчера** (созданные там или скопированные туда — по
-   Spotlight-атрибуту «дата добавления»), в папку с именем этой даты:
-   файлы от `2026-08-01` → папка `2026-08-01`.
-2. **1-го числа каждого месяца** (в то же время) перемещает все папки-даты за
-   прошлый месяц в папку вида `2026 июль`.
-3. Если в назначенное время компьютер спал или был выключен — задача
-   выполняется **при первой возможности** (при пробуждении, входе в систему
-   или в течение часа после включения). Пропущенные дни «догоняются»: файлы
-   раскладываются по папкам с датами их появления.
-4. Файлы, которые не удалось переместить (заняты, нет прав, имя уже занято в
-   папке назначения), **пропускаются** — попытка повторится при следующих
-   запусках в течение `CATCH_UP_DAYS` дней.
+1. **Daily** (at 10:30 by default) moves files and folders that appeared on
+   the desktop **yesterday** (created there or copied in — tracked via the
+   Spotlight "date added" attribute) into a folder named after that date:
+   files from `2026-08-01` → folder `2026-08-01`.
+2. **On the 1st of every month** (at the same time) moves all date folders
+   from the previous month into a folder like `2026 июль` (year + month name).
+3. If the computer was asleep or powered off at the scheduled time, the job
+   runs **at the first opportunity** (on wake, at login, or within an hour
+   of powering on). Missed days are caught up: files are sorted into folders
+   matching the dates they appeared.
+4. Files that could not be moved (busy, no permission, name already taken in
+   the destination) are **skipped** — they are retried on subsequent runs for
+   up to `CATCH_UP_DAYS` days.
 
-## Установка
+## Installation
 
 ```bash
-git clone <url-репозитория>
+git clone <repository-url>
 cd desktop-organizer
 ./install.sh
 ```
 
-`install.sh` создаёт launchd-агент в `~/Library/LaunchAgents` и включает его.
-При первом запуске macOS может спросить разрешение на доступ к рабочему
-столу — разрешите (или добавьте `bash` в «Системные настройки →
-Конфиденциальность и безопасность → Файлы и папки»).
+`install.sh` creates a launchd agent in `~/Library/LaunchAgents` and enables
+it. On the first run macOS may ask for permission to access the Desktop —
+allow it (or add `bash` under "System Settings → Privacy & Security →
+Files and Folders").
 
-## Настройка
+## Configuration
 
-Все параметры — в [`config.env`](config.env):
+All settings live in [`config.env`](config.env):
 
-| Параметр | По умолчанию | Что задаёт |
+| Setting | Default | Meaning |
 |---|---|---|
-| `RUN_HOUR`, `RUN_MINUTE` | `10`, `30` | время ежедневного запуска |
-| `DESKTOP_DIR` | `~/Desktop` | папка, за которой следим |
-| `ARCHIVE_DIR` | `~/Desktop` | куда складывать папки с датами |
-| `CATCH_UP_DAYS` | `14` | за сколько дней назад «догонять» пропущенное |
+| `RUN_HOUR`, `RUN_MINUTE` | `10`, `30` | daily run time |
+| `DESKTOP_DIR` | `~/Desktop` | folder to watch |
+| `ARCHIVE_DIR` | `~/Desktop` | where to put the date folders |
+| `CATCH_UP_DAYS` | `14` | how many days back to catch up on missed work |
 
-После изменения времени выполните `./install.sh` ещё раз — он обновит
-расписание агента.
+After changing the time, run `./install.sh` again — it updates the agent's
+schedule.
 
-## Ручной запуск и отладка
+## Manual runs and debugging
 
 ```bash
-./organize.sh --dry-run   # показать, что будет сделано, ничего не перемещая
-./organize.sh --force     # выполнить прямо сейчас, игнорируя расписание
-./organize.sh --daily     # только разложить вчерашние файлы по датам
-./organize.sh --monthly   # только собрать папки прошлого месяца в "ГГГГ месяц"
+./organize.sh --dry-run   # show what would be done without moving anything
+./organize.sh --force     # run right now, ignoring the schedule
+./organize.sh --daily     # only sort yesterday's files into date folders
+./organize.sh --monthly   # only gather last month's folders into "YYYY <month>"
 ```
 
-Переменные из `config.env` можно переопределить на один запуск, например
-проверить на тестовой папке:
+Any `config.env` variable can be overridden for a single run, e.g. to test
+against a sandbox folder:
 
 ```bash
 DESKTOP_DIR=~/test-desktop ARCHIVE_DIR=~/test-desktop ./organize.sh --dry-run
 ```
 
-Лог: `~/Library/Logs/desktop-organizer.log`.
+Log: `~/Library/Logs/desktop-organizer.log`.
 
-Проверить, что агент установлен: `launchctl list | grep desktop-organizer`.
+Check that the agent is installed: `launchctl list | grep desktop-organizer`.
 
-## Удаление
+## Uninstall
 
 ```bash
 ./uninstall.sh
 ```
 
-## Как это работает
+## How it works
 
-- Расписание — через **launchd** (`StartCalendarInterval`): в отличие от cron,
-  launchd выполняет пропущенную из-за сна задачу сразу при пробуждении Mac.
-- На случай, если Mac был именно **выключен**, агент дополнительно
-  срабатывает при входе в систему и раз в час; сам скрипт следит, чтобы
-  работа выполнялась не раньше назначенного времени и не чаще раза в день
-  (отметка в `~/.local/state/desktop-organizer/last-run`).
-- Дата «появления» файла берётся из Spotlight-атрибута `kMDItemDateAdded`
-  (он выставляется и при создании, и при копировании файла в папку);
-  если атрибут недоступен — используется дата создания файла.
-- Месячная уборка не привязана жёстко к 1-му числу: при каждом запуске
-  папки-даты, относящиеся к прошедшим месяцам, переносятся в соответствующую
-  папку `«ГГГГ месяц»`. Поэтому даже если 1-го числа компьютер был выключен,
-  уборка произойдёт при первом же запуске.
+- Scheduling uses **launchd** (`StartCalendarInterval`): unlike cron, launchd
+  runs a job missed due to sleep as soon as the Mac wakes up.
+- To cover the case when the Mac was fully **powered off**, the agent also
+  fires at login and once an hour; the script itself makes sure the work
+  happens no earlier than the configured time and no more than once a day
+  (stamp file in `~/.local/state/desktop-organizer/last-run`).
+- The date a file "appeared" comes from the Spotlight attribute
+  `kMDItemDateAdded` (set both when a file is created and when it is copied
+  into a folder); if the attribute is unavailable, the file creation date is
+  used as a fallback.
+- The monthly cleanup is not hard-wired to the 1st: on every run, date
+  folders belonging to past months are moved into the matching
+  `"YYYY <month>"` folder. So even if the computer was off on the 1st, the
+  cleanup happens on the very next run.

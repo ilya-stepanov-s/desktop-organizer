@@ -1,20 +1,21 @@
 #!/bin/bash
-# organize.sh — раскладывает файлы с рабочего стола по папкам-датам.
+# organize.sh — sorts desktop files into date folders.
 #
-# Ежедневная часть: всё, что появилось на рабочем столе вчера (и в пропущенные
-# дни, до CATCH_UP_DAYS назад), перемещается в папку с датой появления,
-# например "2026-08-01". Файлы, появившиеся сегодня, не трогаются.
+# Daily part: everything that appeared on the desktop yesterday (and on
+# missed days, up to CATCH_UP_DAYS back) is moved into a folder named after
+# the date it appeared, e.g. "2026-08-01". Files that appeared today are
+# left untouched.
 #
-# Месячная часть: папки-даты за прошедшие месяцы перемещаются в папку
-# "ГГГГ месяц", например "2026 июль". Срабатывает 1-го числа, а если в этот
-# день компьютер был выключен — при первом же следующем запуске.
+# Monthly part: date folders from past months are moved into a
+# "YYYY <month>" folder, e.g. "2026 июль". This kicks in on the 1st of the
+# month, or — if the computer was off that day — on the next run.
 #
-# Запуск: ./organize.sh [--force] [--dry-run] [--daily] [--monthly]
-#   --force   — игнорировать проверку времени и отметку «уже выполнялось
-#               сегодня» (ручной запуск, отладка)
-#   --dry-run — показать, что будет сделано, ничего не перемещая
-#   --daily   — выполнить только ежедневную часть
-#   --monthly — выполнить только месячную часть
+# Usage: ./organize.sh [--force] [--dry-run] [--daily] [--monthly]
+#   --force   — ignore the time check and the "already ran today" stamp
+#               (manual runs, debugging)
+#   --dry-run — show what would be done without moving anything
+#   --daily   — run only the daily part
+#   --monthly — run only the monthly part
 
 set -u
 
@@ -36,7 +37,7 @@ for arg in "$@"; do
     --dry-run) DRY_RUN=1; FORCE=1 ;;
     --daily)   DO_MONTHLY=0; FORCE=1 ;;
     --monthly) DO_DAILY=0; FORCE=1 ;;
-    *) echo "Неизвестный аргумент: $arg" >&2; exit 2 ;;
+    *) echo "Unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
 
@@ -46,10 +47,10 @@ log() { printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG_FILE
 
 TODAY="$(date +%Y-%m-%d)"
 
-# Агент запускается не только по расписанию, но и при входе в систему и раз
-# в час (чтобы «догнать» пропущенный из-за выключенного компьютера запуск).
-# Поэтому сам скрипт решает, пора ли работать: не раньше RUN_HOUR:RUN_MINUTE
-# и не чаще одного раза в день.
+# The agent fires not only on schedule but also at login and once an hour
+# (to catch up on a run missed because the computer was off). So the script
+# itself decides whether it is time to work: no earlier than
+# RUN_HOUR:RUN_MINUTE and no more than once a day.
 if [ "$FORCE" -eq 0 ]; then
   if [ -f "$STAMP_FILE" ] && [ "$(cat "$STAMP_FILE")" = "$TODAY" ]; then
     exit 0
@@ -61,6 +62,7 @@ if [ "$FORCE" -eq 0 ]; then
   fi
 fi
 
+# Names for the monthly archive folders ("2026 июль").
 MONTHS_RU=(январь февраль март апрель май июнь июль август сентябрь октябрь ноябрь декабрь)
 
 is_month_folder() {
@@ -72,7 +74,7 @@ is_month_folder() {
   return 1
 }
 
-move_item() { # $1 = что переместить, $2 = папка назначения
+move_item() { # $1 = source, $2 = destination folder
   local src="$1" dest_dir="$2" name
   name="$(basename "$src")"
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -80,24 +82,24 @@ move_item() { # $1 = что переместить, $2 = папка назнач
     return 0
   fi
   if ! mkdir -p "$dest_dir" 2>>"$LOG_FILE"; then
-    log "ПРОПУСК: не удалось создать папку $dest_dir"
+    log "SKIP: could not create folder $dest_dir"
     return 1
   fi
   if [ -e "$dest_dir/$name" ]; then
-    log "ПРОПУСК: $dest_dir/$name уже существует"
+    log "SKIP: $dest_dir/$name already exists"
     return 1
   fi
   if mv "$src" "$dest_dir/" 2>>"$LOG_FILE"; then
     log "$name -> $dest_dir/"
   else
-    log "ПРОПУСК: не удалось переместить $name (файл занят или нет прав)"
+    log "SKIP: could not move $name (file busy or no permission)"
     return 1
   fi
 }
 
-# Дата появления файла в папке (YYYY-MM-DD). Spotlight-атрибут kMDItemDateAdded
-# отражает и создание, и копирование в папку; если он недоступен — берём дату
-# создания файла.
+# Date the file appeared in the folder (YYYY-MM-DD). The Spotlight attribute
+# kMDItemDateAdded covers both creating a file and copying it into the
+# folder; if it is unavailable, fall back to the file creation date.
 date_added() {
   local raw
   raw="$(mdls -raw -name kMDItemDateAdded "$1" 2>/dev/null)"
@@ -107,15 +109,16 @@ date_added() {
   stat -f %SB -t %Y-%m-%d "$1" 2>/dev/null
 }
 
-# --- Ежедневная часть: вчерашние файлы -> папки "YYYY-MM-DD" ---
+# --- Daily part: yesterday's files -> "YYYY-MM-DD" folders ---
 if [ "$DO_DAILY" -eq 1 ]; then
   CUTOFF="$(date -v-"${CATCH_UP_DAYS}"d +%Y-%m-%d)"
-  log "Раскладываю файлы, появившиеся с $CUTOFF по вчерашний день включительно"
+  log "Sorting files that appeared between $CUTOFF and yesterday inclusive"
   for item in "$DESKTOP_DIR"/*; do
     { [ -e "$item" ] || [ -L "$item" ]; } || continue
     name="$(basename "$item")"
     [ "$name" = ".DS_Store" ] && continue
     if [ -d "$item" ]; then
+      # leave our own archive folders (YYYY-MM-DD and "YYYY <month>") alone
       case "$name" in
         [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) continue ;;
       esac
@@ -123,7 +126,7 @@ if [ "$DO_DAILY" -eq 1 ]; then
     fi
     added="$(date_added "$item")"
     if [ -z "$added" ]; then
-      log "ПРОПУСК: не удалось определить дату появления для $name"
+      log "SKIP: could not determine the date $name appeared"
       continue
     fi
     if [[ "$added" < "$TODAY" && ! "$added" < "$CUTOFF" ]]; then
@@ -132,7 +135,7 @@ if [ "$DO_DAILY" -eq 1 ]; then
   done
 fi
 
-# --- Месячная часть: папки-даты прошлых месяцев -> "ГГГГ месяц" ---
+# --- Monthly part: date folders from past months -> "YYYY <month>" ---
 if [ "$DO_MONTHLY" -eq 1 ]; then
   CUR_YM="${TODAY:0:7}"
   for dir in "$ARCHIVE_DIR"/*; do
@@ -154,4 +157,4 @@ fi
 if [ "$DRY_RUN" -eq 0 ] && [ "$FORCE" -eq 0 ]; then
   echo "$TODAY" > "$STAMP_FILE"
 fi
-log "Готово"
+log "Done"

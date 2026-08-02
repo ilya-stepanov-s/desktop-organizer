@@ -11,8 +11,8 @@
         <string>__SCRIPT__</string>
     </array>
 
-    <!-- Основное расписание: каждый день в заданное время.
-         Если Mac в это время спал, launchd выполнит задачу при пробуждении. -->
+    <!-- Main schedule: every day at the configured time.
+         If the Mac was asleep at that moment, launchd runs the job on wake. -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
@@ -21,10 +21,10 @@
         <integer>__MINUTE__</integer>
     </dict>
 
-    <!-- Подстраховка на случай, если Mac был выключен в момент запуска:
-         агент также срабатывает при входе в систему и раз в час.
-         Сам скрипт следит, чтобы работа выполнялась не раньше заданного
-         времени и не чаще одного раза в день. -->
+    <!-- Safety net for the case when the Mac was powered off at run time:
+         the agent also fires at login and once an hour. The script itself
+         makes sure the work happens no earlier than the configured time
+         and no more than once a day. -->
     <key>RunAtLoad</key>
     <true/>
     <key>StartInterval</key>

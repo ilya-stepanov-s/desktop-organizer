@@ -1,5 +1,5 @@
 #!/bin/bash
-# uninstall.sh — удаляет launchd-агент. Файлы и папки на рабочем столе не трогает.
+# uninstall.sh — removes the launchd agent. Desktop files and folders are left untouched.
 
 set -euo pipefail
 
@@ -12,4 +12,4 @@ PLIST="$HOME/Library/LaunchAgents/$LAUNCHD_LABEL.plist"
 launchctl bootout "gui/$(id -u)/$LAUNCHD_LABEL" 2>/dev/null || true
 rm -f "$PLIST"
 
-echo "Агент $LAUNCHD_LABEL удалён."
+echo "Agent $LAUNCHD_LABEL removed."

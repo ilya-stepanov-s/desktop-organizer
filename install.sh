@@ -1,6 +1,6 @@
 #!/bin/bash
-# install.sh — устанавливает (или обновляет) launchd-агент.
-# Запускайте заново после изменения времени в config.env.
+# install.sh — installs (or updates) the launchd agent.
+# Re-run it after changing the time in config.env.
 
 set -euo pipefail
 
@@ -25,6 +25,6 @@ chmod +x "$SCRIPT_DIR/organize.sh"
 launchctl bootout "gui/$(id -u)/$LAUNCHD_LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
-printf 'Готово: агент %s установлен, запуск ежедневно в %02d:%02d.\n' \
+printf 'Done: agent %s installed, runs daily at %02d:%02d.\n' \
   "$LAUNCHD_LABEL" "$((10#$RUN_HOUR))" "$((10#$RUN_MINUTE))"
-echo "Лог: $LOG_FILE"
+echo "Log: $LOG_FILE"
