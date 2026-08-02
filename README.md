@@ -9,7 +9,7 @@ Automatic macOS desktop cleanup.
    Spotlight "date added" attribute) into a folder named after that date:
    files from `2026-08-01` → folder `2026-08-01`.
 2. **On the 1st of every month** (at the same time) moves all date folders
-   from the previous month into a folder like `2026 июль` (year + month name).
+   from the previous month into a folder like `2026 July` (year + month name).
 3. If the computer was asleep or powered off at the scheduled time, the job
    runs **at the first opportunity** (on wake, at login, or within an hour
    of powering on). Missed days are caught up: files are sorted into folders

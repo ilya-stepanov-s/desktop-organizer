@@ -7,7 +7,7 @@
 # left untouched.
 #
 # Monthly part: date folders from past months are moved into a
-# "YYYY <month>" folder, e.g. "2026 июль". This kicks in on the 1st of the
+# "YYYY <month>" folder, e.g. "2026 July". This kicks in on the 1st of the
 # month, or — if the computer was off that day — on the next run.
 #
 # Usage: ./organize.sh [--force] [--dry-run] [--daily] [--monthly]
@@ -62,12 +62,15 @@ if [ "$FORCE" -eq 0 ]; then
   fi
 fi
 
-# Names for the monthly archive folders ("2026 июль").
-MONTHS_RU=(январь февраль март апрель май июнь июль август сентябрь октябрь ноябрь декабрь)
+# Names for the monthly archive folders ("2026 July").
+MONTHS=(January February March April May June July August September October November December)
+# Legacy names from older versions — still recognized as archive folders so
+# the daily part never treats them as regular items.
+MONTHS_LEGACY=(январь февраль март апрель май июнь июль август сентябрь октябрь ноябрь декабрь)
 
 is_month_folder() {
   local n="$1" m
-  for m in "${MONTHS_RU[@]}"; do
+  for m in "${MONTHS[@]}" "${MONTHS_LEGACY[@]}"; do
     # shellcheck disable=SC2254
     case "$n" in [0-9][0-9][0-9][0-9]" $m") return 0 ;; esac
   done
@@ -149,7 +152,7 @@ if [ "$DO_MONTHLY" -eq 1 ]; then
     if [[ "$ym" < "$CUR_YM" ]]; then
       year="${name:0:4}"
       month_idx=$((10#${name:5:2} - 1))
-      move_item "$dir" "$ARCHIVE_DIR/$year ${MONTHS_RU[$month_idx]}"
+      move_item "$dir" "$ARCHIVE_DIR/$year ${MONTHS[$month_idx]}"
     fi
   done
 fi
