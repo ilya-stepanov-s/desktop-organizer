@@ -30,9 +30,11 @@
     <key>StartInterval</key>
     <integer>3600</integer>
 
+    <!-- The script writes its own log; this file only catches stray output
+         (e.g. bash startup errors), so it does not duplicate log lines. -->
     <key>StandardOutPath</key>
-    <string>__LOG__</string>
+    <string>__LAUNCHD_LOG__</string>
     <key>StandardErrorPath</key>
-    <string>__LOG__</string>
+    <string>__LAUNCHD_LOG__</string>
 </dict>
 </plist>

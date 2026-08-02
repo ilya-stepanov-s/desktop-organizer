@@ -27,9 +27,17 @@ cd desktop-organizer
 ```
 
 `install.sh` creates a launchd agent in `~/Library/LaunchAgents` and enables
-it. On the first run macOS may ask for permission to access the Desktop —
-allow it (or add `bash` under "System Settings → Privacy & Security →
-Files and Folders").
+it.
+
+**Required: give bash access to the Desktop.** macOS privacy protection
+(TCC) silently hides the Desktop from scripts run by launchd — the agent
+will see an empty folder and do nothing. Grant access once:
+
+1. Open **System Settings → Privacy & Security → Full Disk Access**
+2. Click **+**, press **⌘⇧G** in the file dialog, type `/bin/bash`, press
+   Enter and add it
+3. Verify it works: `launchctl kickstart -k gui/$(id -u)/com.desktop-organizer.daily`,
+   then check `~/Library/Logs/desktop-organizer.log`
 
 ## Configuration
 

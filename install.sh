@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/config.env"
 
 PLIST="$HOME/Library/LaunchAgents/$LAUNCHD_LABEL.plist"
 LOG_FILE="$HOME/Library/Logs/desktop-organizer.log"
+LAUNCHD_LOG="$HOME/Library/Logs/desktop-organizer.launchd.log"
 
 mkdir -p "$HOME/Library/LaunchAgents"
 
@@ -17,7 +18,7 @@ sed -e "s|__LABEL__|$LAUNCHD_LABEL|g" \
     -e "s|__SCRIPT__|$SCRIPT_DIR/organize.sh|g" \
     -e "s|__HOUR__|$RUN_HOUR|g" \
     -e "s|__MINUTE__|$RUN_MINUTE|g" \
-    -e "s|__LOG__|$LOG_FILE|g" \
+    -e "s|__LAUNCHD_LOG__|$LAUNCHD_LOG|g" \
     "$SCRIPT_DIR/com.desktop-organizer.plist.template" > "$PLIST"
 
 chmod +x "$SCRIPT_DIR/organize.sh"
